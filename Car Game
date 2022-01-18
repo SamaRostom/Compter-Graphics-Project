@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<canvas id="c"></canvas>
+     <style>
+    .menu {
+      position: fixed;
+      top: 30px;
+      right: 10px;
+    }
+    button {
+        margin-bottom: 6px;
+        width: 120px;
+        font-size: 14px;
+        outline: none;
+        background: #333;
+        color: #ddd;
+        border: none;
+        opacity: .5;
+    }
+    button:hover {
+        background: #222;
+        color: #eee;
+    }
+    body {
+    margin: 0px;
+    }
+    p, span{
+      color: white;
+    }
+  </style>
+</head>
+<body>
+     <div class="menu">
+        <button id="Level1">Start Engine </button>
+        <p>You have: <span id="timer"></span> seconds remaining!</p>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+	<script type="module">
+        
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.117.1/build/three.module.js';
+        import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.124.0/examples/jsm/controls/OrbitControls.js';
+        import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.129.0/examples/jsm/loaders/GLTFLoader.js';
+
+        var ww = window.innerWidth, wh = window.innerHeight;
+        var scene,camera,renderer,car,road,col=true,start,box,box2;
+        var loader = new THREE.TextureLoader();
+        var timer; 
+        var timeLeft = 20;
+
+        function main(){
+        	const canvas = document.querySelector('#c');
+            renderer = new THREE.WebGLRenderer({ canvas });   
+	        renderer.setSize(ww,wh);
+
+	        scene = new THREE.Scene();
+            scene.background = new THREE.Color('white');
+            
+            //PerspectiveCamera(angle, aspectRatio, near, far);
+            camera = new THREE.PerspectiveCamera(45, ww/wh, 1, 100000);
+            camera.position.set(3250, -1400, 300);
+            scene.add(camera);
+
+            const controls = new OrbitControls(camera, canvas);
+            controls.target.set(3250, -1440, 0);
+            controls.update();
+
+            const color = 0xFFFFFF;
+            const intensity = 20;
+            const light = new THREE.DirectionalLight(color, intensity);
+            light.position.set( 0, 1000, 100);
+            scene.add(light);
+            scene.add(light.target);
+
+            const carloader = new GLTFLoader();
+            carloader.load('car6/scene.gltf', function(gltf){
+            	car = gltf.scene;
+                car.rotation.y = Math.PI;
+            	car.scale.set(25, 25, 25);
+                car.position.set(3250, -1440, 0);
+            	scene.add(car);
+            }, undefined, function(error){
+            	console.error(error);
+            });
+
+            camera.lookAt(3250, -1440, 0);
+
+            const sloader = new GLTFLoader();
+            sloader.load('starting_line/scene.gltf', function (gltf) {
+                start=gltf.scene;
+                start.rotation.y=Math.PI;
+                start.position.set(3250, -1380, -60);
+                scene.add(start);
+            }, undefined, function (error) { console.error(error); });
+
+            var ggeometry = new THREE.PlaneGeometry( 10000, 10000 );
+            var gtexture = loader.load('grass.jpg');
+            var gmaterial = new THREE.MeshBasicMaterial( {map : gtexture ,side: THREE.DoubleSide} );
+            var ground = new THREE.Mesh( ggeometry, gmaterial );
+            //90 degree on x axis
+            ground.rotateX(-Math.PI/2);
+
+            //ground.rotateZ(-Math.PI/2);
+            ground.position.set(0, -1500, 0);
+            scene.add( ground );
+
+            var rtexture = loader.load('asphalt-texture.jpg');
+            //RingGeometry(innerRadius, outerRadius, thetaSegments , phiSegments , thetaStart , thetaLength)
+            const rgeometry = new THREE.RingGeometry( 3000.735, 3500.375, 30, 9, 1.80327418316054, 6.283185307179586 );
+            const rmaterial = new THREE.MeshBasicMaterial( { map :  rtexture, side: THREE.DoubleSide } );
+            const ringroad = new THREE.Mesh( rgeometry, rmaterial );
+            ringroad.rotateX(-Math.PI/2);
+            ringroad.position.set(0, -1450, 0);
+            scene.add( ringroad );
+
+            const Geomtry = new THREE.BoxGeometry(200, 10, 10);
+            var Gmaterial = new THREE.MeshBasicMaterial( {color : 0xffffff } );
+            box = new THREE.Mesh(Geomtry, Gmaterial);
+            box.position.set(3250, -1430, -75);
+            scene.add(box);
+
+            const Geomtry2 = new THREE.BoxGeometry(200, 10, 10);
+            var Gmaterial2 = new THREE.MeshBasicMaterial( {color : 0xffffff } );
+            box2 = new THREE.Mesh(Geomtry2, Gmaterial2);
+            box2.position.set(3250, -1430, -65);
+            scene.add(box2); 
+
+            const materialArray = createMaterialArray('sky');
+            const skyboxGeomtry = new THREE.BoxGeometry(10000, 10000, 10000);
+            const skybox = new THREE.Mesh(skyboxGeomtry, materialArray);
+            scene.add(skybox);   
+
+            animate();
+            requestAnimationFrame(animate);
+        }
+
+        function animate(){
+        	requestAnimationFrame(animate);
+        	renderer.render(scene, camera);
+        	renderer.physicallyCorrectLights = true;
+        }
+
+        function createMaterialArray(filename) {
+            const skyBoxImagePath=[
+                filename+'/'+filename+'_ft.jpg',
+                filename+'/'+filename+'_bk.jpg',
+                filename+'/'+filename+'_up.jpg',
+                filename+'/'+filename+'_dn.jpg',
+                filename+'/'+filename+'_rt.jpg',
+                filename+'/'+filename+'_lf.jpg'
+            ];
+            const materialArray=new Array();
+            for ( var i = 0; i < skyBoxImagePath.length; i++){
+                const texture=new THREE.TextureLoader().load(skyBoxImagePath[i]);
+                materialArray[i]=new THREE.MeshBasicMaterial({map:texture,side:THREE.BackSide});
+            }
+            return materialArray;
+        }
+
+        function playSound(){
+            var audio = new Audio('Start-Engine.mp3');
+            audio.play();
+        }
+
+        document.querySelector("#Level1").addEventListener("click", () =>{
+            playSound();
+        });
+
+        function startpoint(){
+            if(Math.abs(car.position.x - box.position.x)<45 && Math.abs(car.position.z - box.position.z)<45){
+                starting();
+            }
+            renderer.render(scene,camera);
+        };
+
+        function gameOver() {  
+            cancelInterval(timer);
+        }
+
+        function updateTimer() {
+            timeLeft = timeLeft - 1;
+            if(timeLeft >= 0)
+                $('#timer').html(timeLeft);
+            else {
+                gameOver();
+            }
+        }
+
+        function starting() {
+            timer = setInterval(updateTimer, 1000);
+            updateTimer();
+        }
+        
+        window.addEventListener("keydown", keysPressed);
+        window.addEventListener("keyup", keysReleased);
+
+        var keys = [];
+
+        function keysPressed(e) {
+            //store an entry for every key pressed
+            keys[e.keyCode] = true;
+  
+            // up & right
+            if (keys[38] && keys[39]) {
+                startpoint();
+                car.rotateY(-0.03);  
+                car.translateZ(+50);
+                car.translateX(-2);
+                camera.position.z = car.position.z + 300; 
+                camera.position.x = car.position.x; 
+            }
+  
+            // up & left
+            if (keys[38] && keys[37]) {
+                startpoint();
+                car.rotateY(+0.03);
+                car.translateZ(+50);
+                car.translateX(+2);
+                camera.position.z = car.position.z + 300; 
+                camera.position.x = car.position.x; 
+            }
+
+            // down & right
+            if (keys[40] && keys[39]) {
+                startpoint();
+                car.rotateY(+0.009);
+                car.translateZ(-20);
+                car.translateX(-2);
+                camera.position.z = car.position.z + 300; 
+                camera.position.x = car.position.x; 
+            }
+  
+            // down & left
+            if (keys[40] && keys[37]) {
+                startpoint();
+                car.rotateY(-0.009);
+                car.translateZ(-20);
+                car.translateX(+2);
+                camera.position.z = car.position.z + 300; 
+                camera.position.x = car.position.x; 
+            }
+
+            //up
+            if (keys[38]) { 
+                startpoint();
+                car.translateZ(+50);
+                camera.position.z = car.position.z + 300 ; 
+            }
+            //down
+            if (keys[40]) { 
+                startpoint();
+                car.translateZ(-20);
+                camera.position.z = car.position.z + 300 ; 
+            }
+        }
+
+        function keysReleased(e) {
+            //up
+            if (keys[38]) { 
+                car.translateZ(+12);
+                car.translateZ(+6);
+                car.translateZ(+3);
+                car.translateZ(+0.5);
+            }
+            //down
+            if (keys[40]) { 
+                car.translateZ(-12);
+                car.translateZ(-6);
+                car.translateZ(-3);
+                car.translateZ(-0.5);
+            }
+
+            // mark keys that were released
+            keys[e.keyCode] = false;
+        }
+
+        main();
+
+
+    </script>
+</body>
+</html>
